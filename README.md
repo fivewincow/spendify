@@ -1,36 +1,78 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Spendify
 
-## Getting Started
+개인 가계부 웹 애플리케이션입니다. 영수증 이미지와 함께 수입/지출 내역을 관리할 수 있습니다.
 
-First, run the development server:
+## 주요 기능
+
+- 수입/지출 내역 등록 및 관리
+- 영수증 이미지 첨부
+- 월별 거래 내역 조회
+- 수입/지출 요약 통계
+- 정렬 및 보기 모드 변경
+
+## 기술 스택
+
+- **Framework**: Next.js 16
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **UI Components**: Radix UI, shadcn/ui
+- **State Management**: TanStack Query (React Query)
+- **Database**: Supabase
+- **Date Handling**: date-fns
+
+## 시작하기
+
+### 필수 조건
+
+- Node.js 18 이상
+- pnpm
+
+### 설치
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 환경 변수 설정
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+`.env.local` 파일을 생성하고 Supabase 연결 정보를 설정하세요:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```env
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
 
-## Learn More
+### 개발 서버 실행
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+pnpm dev
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+[http://localhost:3000](http://localhost:3000)에서 앱을 확인할 수 있습니다.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 빌드
 
-## Deploy on Vercel
+```bash
+pnpm build
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 프로덕션 실행
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+pnpm start
+```
+
+## 프로젝트 구조
+
+```
+src/
+├── app/           # Next.js App Router 페이지
+├── components/    # React 컴포넌트
+├── hooks/         # 커스텀 훅
+├── lib/           # 유틸리티 및 설정
+└── types/         # TypeScript 타입 정의
+```
+
+## 라이선스
+
+MIT
