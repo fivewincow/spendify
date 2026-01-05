@@ -3,14 +3,18 @@
 import { useMemo, useState } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameDay } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { Transaction } from '@/types/transaction';
+import { Transaction, EXPENSE_CATEGORIES } from '@/types/transaction';
 import { formatCurrency } from '@/lib/format';
+import { useCreateTransaction } from '@/hooks/useTransactions';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Plus } from 'lucide-react';
 
 interface CalendarViewProps {
   transactions: Transaction[];
@@ -24,6 +28,13 @@ const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 export function CalendarView({ transactions, year, month, onItemClick }: CalendarViewProps) {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isDayDialogOpen, setIsDayDialogOpen] = useState(false);
+
+  // 입력 폼 상태
+  const [showForm, setShowForm] = useState(false);
+  const [newContent, setNewContent] = useState('');
+  const [newAmount, setNewAmount] = useState('');
+
+  const createTransaction = useCreateTransaction();
 
   // 해당 월의 날짜들
   const days = useMemo(() => {
@@ -70,6 +81,41 @@ export function CalendarView({ transactions, year, month, onItemClick }: Calenda
   const handleDayClick = (day: Date) => {
     setSelectedDate(day);
     setIsDayDialogOpen(true);
+    setShowForm(false);
+    setNewContent('');
+    setNewAmount('');
+  };
+
+  const handleAddTransaction = async () => {
+    if (!selectedDate || !newContent.trim() || !newAmount) return;
+
+    const amount = parseInt(newAmount.replace(/,/g, ''), 10);
+    if (isNaN(amount) || amount <= 0) return;
+
+    try {
+      await createTransaction.mutateAsync({
+        type: 'expense',
+        date: format(selectedDate, 'yyyy-MM-dd'),
+        content: newContent.trim(),
+        amount,
+        category: EXPENSE_CATEGORIES[0],
+      });
+      setNewContent('');
+      setNewAmount('');
+      setShowForm(false);
+    } catch (error) {
+      console.error('Failed to create transaction:', error);
+    }
+  };
+
+  const handleAmountChange = (value: string) => {
+    // 숫자만 허용하고 콤마 포맷팅
+    const numericValue = value.replace(/[^\d]/g, '');
+    if (numericValue) {
+      setNewAmount(parseInt(numericValue, 10).toLocaleString('ko-KR'));
+    } else {
+      setNewAmount('');
+    }
   };
 
   return (
@@ -101,6 +147,7 @@ export function CalendarView({ transactions, year, month, onItemClick }: Calenda
           const { income, expense, count } = getDaySummary(dateKey);
           const dayOfWeek = getDay(day);
           const isToday = isSameDay(day, new Date());
+          const total = expense - income; // 지출 - 수입 (양수면 지출이 많음)
 
           return (
             <button
@@ -122,24 +169,14 @@ export function CalendarView({ transactions, year, month, onItemClick }: Calenda
                 {format(day, 'd')}
               </span>
               {count > 0 && (
-                <div className="flex-1 flex flex-col gap-0.5 mt-0.5 overflow-hidden">
-                  {(transactionsByDate[dateKey] || []).slice(0, 2).map((t) => (
-                    <div
-                      key={t.id}
-                      className={`text-[9px] px-0.5 rounded truncate leading-tight ${
-                        t.type === 'income'
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-red-100 text-red-700'
-                      } ${t.is_recurring ? 'border border-dashed border-current' : ''}`}
-                    >
-                      {t.is_recurring && '📌 '}{t.content}
-                    </div>
-                  ))}
-                  {count > 2 && (
-                    <span className="text-[9px] text-gray-500 leading-tight">
-                      +{count - 2}개 더
-                    </span>
-                  )}
+                <div className="flex-1 flex flex-col justify-end">
+                  <span
+                    className={`text-[10px] font-semibold text-right ${
+                      total > 0 ? 'text-red-600' : 'text-green-600'
+                    }`}
+                  >
+                    {total > 0 ? '-' : '+'}{formatCurrency(Math.abs(total))}
+                  </span>
                 </div>
               )}
             </button>
@@ -155,9 +192,11 @@ export function CalendarView({ transactions, year, month, onItemClick }: Calenda
               {selectedDate && format(selectedDate, 'yyyy년 M월 d일 (EEEE)', { locale: ko })}
             </DialogTitle>
           </DialogHeader>
+
+          {/* 거래 내역 목록 */}
           <div className="space-y-2 py-2">
-            {selectedDateTransactions.length === 0 ? (
-              <p className="text-center text-gray-500 py-8">거래 내역이 없습니다</p>
+            {selectedDateTransactions.length === 0 && !showForm ? (
+              <p className="text-center text-gray-500 py-8">이날의 일정이 없습니다</p>
             ) : (
               selectedDateTransactions.map((transaction) => (
                 <button
@@ -177,7 +216,6 @@ export function CalendarView({ transactions, year, month, onItemClick }: Calenda
                       )}
                       <p className="font-medium text-gray-900 truncate">{transaction.content}</p>
                     </div>
-                    <p className="text-xs text-gray-500">{transaction.category}</p>
                   </div>
                   <span
                     className={`font-semibold ml-2 ${
@@ -191,6 +229,79 @@ export function CalendarView({ transactions, year, month, onItemClick }: Calenda
               ))
             )}
           </div>
+
+          {/* 합계 표시 */}
+          {selectedDateTransactions.length > 0 && (
+            <div className="border-t pt-3 mt-2">
+              <div className="flex justify-between items-center font-semibold">
+                <span className="text-gray-700">합계</span>
+                <span className="text-red-600">
+                  -{formatCurrency(
+                    selectedDateTransactions
+                      .filter((t) => t.type === 'expense')
+                      .reduce((sum, t) => sum + t.amount, 0) -
+                    selectedDateTransactions
+                      .filter((t) => t.type === 'income')
+                      .reduce((sum, t) => sum + t.amount, 0)
+                  )}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* 입력 폼 */}
+          {showForm && (
+            <div className="border-t pt-4 mt-2 space-y-3">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="내용"
+                  value={newContent}
+                  onChange={(e) => setNewContent(e.target.value)}
+                  className="flex-1"
+                />
+                <Input
+                  placeholder="금액"
+                  value={newAmount}
+                  onChange={(e) => handleAmountChange(e.target.value)}
+                  className="w-28 text-right"
+                  inputMode="numeric"
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setShowForm(false);
+                    setNewContent('');
+                    setNewAmount('');
+                  }}
+                >
+                  취소
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleAddTransaction}
+                  disabled={!newContent.trim() || !newAmount || createTransaction.isPending}
+                >
+                  {createTransaction.isPending ? '저장 중...' : '저장'}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* + 버튼 */}
+          {!showForm && (
+            <div className="flex justify-end pt-2">
+              <Button
+                onClick={() => setShowForm(true)}
+                className="h-12 w-12 rounded-full"
+                size="icon"
+              >
+                <Plus className="h-6 w-6" />
+              </Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

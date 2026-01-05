@@ -32,7 +32,7 @@ export default function HomePage() {
   });
   const [sortBy, setSortBy] = useState<SortOption>('date_desc');
   const [viewMode, setViewMode] = useState<ViewMode>('grouped');
-  const [pageViewMode, setPageViewModeState] = useState<PageViewMode>('list');
+  const [pageViewMode, setPageViewModeState] = useState<PageViewMode>('calendar');
 
   // 캘린더 뷰로 변경 시 월별 필터로 강제 변경
   const setPageViewMode = (mode: PageViewMode) => {
